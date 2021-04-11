@@ -1,9 +1,11 @@
 package main
 
 import (
+	"context"
 	"flag"
 
 	"github.com/phsiao/fargate-migrate/internal/config"
+	"github.com/phsiao/fargate-migrate/internal/kubernetes"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -18,8 +20,20 @@ func init() {
 func main() {
 	flag.Parse()
 
-	_, err := config.ParseConfig(configFile)
+	config, err := config.ParseConfig(configFile)
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	deps, err := kubernetes.LookupService(
+		context.Background(),
+		config.Spec.KubernetesConfig.Context,
+		config.Spec.KubernetesConfig.Namespace,
+		config.Spec.KubernetesConfig.Service,
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	log.Infof("%v", deps)
 }

@@ -17,7 +17,7 @@ type Spec struct {
 
 type KubernetesConfig struct {
 	Context   *string `yaml:"context,omitempty"`
-	Namespace *string `yaml:"namespace,omitempty"`
+	Namespace string  `yaml:"namespace,omitempty"`
 	Service   string  `yaml:"service,omitempty"`
 }
 
