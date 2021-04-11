@@ -3,13 +3,14 @@ package kubernetes
 import (
 	"context"
 
-	v1 "k8s.io/api/apps/v1"
+	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
 )
 
-func LookupService(ctx context.Context, context *string, namespace, service string) ([]*v1.Deployment, error) {
+func LookupService(ctx context.Context, context *string, namespace, service string) (*corev1.Service, []*appsv1.Deployment, error) {
 	var err error
 
 	loadingRules := clientcmd.NewDefaultClientConfigLoadingRules()
@@ -20,24 +21,24 @@ func LookupService(ctx context.Context, context *string, namespace, service stri
 	kubeConfig := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(loadingRules, configOverrides)
 	config, err := kubeConfig.ClientConfig()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	clientset, err := kubernetes.NewForConfig(config)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	svc, err := clientset.CoreV1().Services(namespace).Get(ctx, service, metav1.GetOptions{})
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	deps, err := clientset.AppsV1().Deployments(namespace).List(ctx, metav1.ListOptions{})
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	matchingDep := []*v1.Deployment{}
+	matchingDeps := []*appsv1.Deployment{}
 	for idx, dep := range deps.Items {
 		match := true
 		for k, v := range svc.Spec.Selector {
@@ -52,9 +53,9 @@ func LookupService(ctx context.Context, context *string, namespace, service stri
 			}
 		}
 		if match {
-			matchingDep = append(matchingDep, &deps.Items[idx])
+			matchingDeps = append(matchingDeps, &deps.Items[idx])
 		}
 	}
 
-	return matchingDep, nil
+	return svc, matchingDeps, nil
 }
