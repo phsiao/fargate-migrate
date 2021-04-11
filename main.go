@@ -3,20 +3,68 @@ package main
 import (
 	"context"
 	"flag"
+	"io/ioutil"
+	"os"
+	"path/filepath"
 	"strings"
 
 	cdkpython "github.com/phsiao/fargate-migrate/internal/cdk/python"
 	"github.com/phsiao/fargate-migrate/internal/config"
 	"github.com/phsiao/fargate-migrate/internal/kubernetes"
 	log "github.com/sirupsen/logrus"
+	v1 "k8s.io/api/apps/v1"
 )
 
 var (
-	configFile string
+	configFile  string
+	CDKPath     string = "cdk"
+	APPPath     string = "app.py"
+	CDKJsonPath string = "cdk.json"
 )
 
 func init() {
 	flag.StringVar(&configFile, "config", "config.yaml", "fargate-migrate config file to use")
+}
+
+func writeCDKArtifacts(config *config.Config, deployment *v1.Deployment) error {
+	var err error
+
+	// create CDK directory
+	if _, err := os.Stat(CDKPath); os.IsNotExist(err) {
+		os.Mkdir(CDKPath, 0744)
+	}
+
+	// write cdk.json file
+	cdkJson := []string{
+		`{`,
+		`    "app": "python3 app.py"`,
+		`}`,
+	}
+	err = ioutil.WriteFile(filepath.Join(CDKPath, CDKJsonPath), []byte(strings.Join(cdkJson, "\n")), 0644)
+	if err != nil {
+		return err
+	}
+
+	stack := cdkpython.NewFargateServiceStack(
+		config.Spec.FargateConfig.StackName,
+		config.Spec.FargateConfig.ServiceName,
+		config.Spec.FargateConfig.AccountID,
+		config.Spec.FargateConfig.Region,
+		cdkpython.WithVPC(cdkpython.NewManagedVPCStatementGenerator()),
+		cdkpython.WithDomain(cdkpython.NewHostedZoneStatementGenerator(config.Spec.FargateConfig.DomainName)),
+		cdkpython.WithCluster(cdkpython.NewFargateClusterStatementGenerator()),
+	)
+	rval, err := stack.Generate()
+	if err != nil {
+		return err
+	}
+	data := strings.Join(rval, "\n")
+	err = ioutil.WriteFile(filepath.Join(CDKPath, APPPath), []byte(data), 0644)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func main() {
@@ -37,20 +85,17 @@ func main() {
 		log.Fatal(err)
 	}
 
-	log.Debugf("%v", deps)
+	if len(deps) > 1 {
+		log.Fatal("only support services backed by exactly one deployment")
+	}
 
-	stack := cdkpython.NewFargateServiceStack(
-		config.Spec.FargateConfig.StackName,
-		config.Spec.FargateConfig.ServiceName,
-		config.Spec.FargateConfig.AccountID,
-		config.Spec.FargateConfig.Region,
-		cdkpython.WithVPC(cdkpython.NewManagedVPCStatementGenerator()),
-		cdkpython.WithDomain(cdkpython.NewHostedZoneStatementGenerator(config.Spec.FargateConfig.DomainName)),
-		cdkpython.WithCluster(cdkpython.NewFargateClusterStatementGenerator()),
-	)
-	rval, err := stack.Generate()
+	dep := deps[0]
+	if len(dep.Spec.Template.Spec.Containers) != 1 {
+		log.Fatal("only support deployment with exactly one container")
+	}
+
+	err = writeCDKArtifacts(config, deps[0])
 	if err != nil {
 		log.Fatal(err)
 	}
-	log.Infof("\n%s", strings.Join(rval, "\n"))
 }

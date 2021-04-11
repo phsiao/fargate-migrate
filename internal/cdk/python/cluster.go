@@ -16,7 +16,7 @@ func NewFargateClusterStatementGenerator() *FargateClusterStatementGenerator {
 
 func (g FargateClusterStatementGenerator) Generate() ([]string, error) {
 	rval := []string{
-		fmt.Sprintf("ecs.Cluster(self, \"%s\", vpc=vpc, capacity_providers=[\"FARGATE\", \"FARGATE_SPOT\"])",
+		fmt.Sprintf(`ecs.Cluster(self, "%s", vpc=vpc, capacity_providers=["FARGATE", "FARGATE_SPOT"])`,
 			g.clusterName,
 		),
 	}

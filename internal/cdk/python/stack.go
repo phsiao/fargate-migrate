@@ -102,7 +102,7 @@ func (s FargateServiceStack) Generate() ([]string, error) {
 	}
 	output = append(output, fmt.Sprintf("        cluster = %s", strings.Join(snippets, "\n")))
 
-	output = append(output, fmt.Sprintf("        svc = ecs_patterns.ApplicationLoadBalancedFargateService(self, \"%sService\",", s.stackName))
+	output = append(output, fmt.Sprintf(`        svc = ecs_patterns.ApplicationLoadBalancedFargateService(self, "%sService",`, s.stackName))
 	output = append(output, "            cluster=cluster,")
 	output = append(output, "            desired_count=1,")
 	output = append(output, "            memory_limit_mib=512,")
@@ -111,14 +111,14 @@ func (s FargateServiceStack) Generate() ([]string, error) {
 	output = append(output, "            domain_zone=zone,")
 	output = append(output, "            task_image_options=ecs_patterns.ApplicationLoadBalancedTaskImageOptions(")
 	output = append(output, "                image=ecs.ContainerImage.from_registry(\"nginx:alpine\")),")
-	output = append(output, fmt.Sprintf("            domain_name=\"%s\"", s.serviceName))
+	output = append(output, fmt.Sprintf(`            domain_name="%s"`, s.serviceName))
 	output = append(output, "            )")
 
 	output = append(output, "\n")
 
 	output = append(output, "app = cdk.App()")
 	output = append(output, fmt.Sprintf(
-		"%sStack(app, \"%sStack\", env=cdk.Environment(account=\"%s\", region=\"%s\"))",
+		`%sStack(app, "%sStack", env=cdk.Environment(account="%s", region="%s"))`,
 		s.stackName,
 		s.stackName,
 		s.accountID,

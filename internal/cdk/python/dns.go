@@ -18,7 +18,7 @@ func NewHostedZoneStatementGenerator(domainName string) *HostedZoneStatementGene
 
 func (g HostedZoneStatementGenerator) Generate() ([]string, error) {
 	rval := []string{
-		fmt.Sprintf("route53.HostedZone.from_lookup(self, \"%s\", domain_name=\"%s\")",
+		fmt.Sprintf(`route53.HostedZone.from_lookup(self, "%s", domain_name="%s")`,
 			g.zoneName, g.domainName,
 		),
 	}
