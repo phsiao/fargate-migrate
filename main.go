@@ -13,7 +13,8 @@ import (
 	"github.com/phsiao/fargate-migrate/internal/config"
 	"github.com/phsiao/fargate-migrate/internal/kubernetes"
 	log "github.com/sirupsen/logrus"
-	v1 "k8s.io/api/apps/v1"
+	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 )
 
 var (
@@ -28,7 +29,7 @@ func init() {
 	flag.StringVar(&configFile, "config", "config.yaml", "fargate-migrate config file to use")
 }
 
-func writeCDKArtifacts(config *config.Config, deployment *v1.Deployment) error {
+func writeCDKArtifacts(config *config.Config, service *corev1.Service, deployment *appsv1.Deployment) error {
 	var err error
 
 	// create CDK directory
@@ -52,6 +53,7 @@ func writeCDKArtifacts(config *config.Config, deployment *v1.Deployment) error {
 		os.Mkdir(filepath.Join(CDKPath, DockerPath), 0744)
 	}
 
+	var firstTaskAsset string
 	for _, container := range deployment.Spec.Template.Spec.Containers {
 		// create container docker directory
 		if _, err := os.Stat(filepath.Join(CDKPath, DockerPath, container.Name)); os.IsNotExist(err) {
@@ -65,6 +67,11 @@ func writeCDKArtifacts(config *config.Config, deployment *v1.Deployment) error {
 		if err != nil {
 			return err
 		}
+
+		if firstTaskAsset == "" {
+			// taskAssetPath is relative to CDKPath
+			firstTaskAsset = filepath.Join(DockerPath, container.Name)
+		}
 	}
 
 	stack := cdkpython.NewFargateServiceStack(
@@ -72,6 +79,8 @@ func writeCDKArtifacts(config *config.Config, deployment *v1.Deployment) error {
 		config.Spec.FargateConfig.ServiceName,
 		config.Spec.FargateConfig.AccountID,
 		config.Spec.FargateConfig.Region,
+		int(service.Spec.Ports[0].Port),
+		firstTaskAsset,
 		cdkpython.WithVPC(cdkpython.NewManagedVPCStatementGenerator()),
 		cdkpython.WithDomain(cdkpython.NewHostedZoneStatementGenerator(config.Spec.FargateConfig.DomainName)),
 		cdkpython.WithCluster(cdkpython.NewFargateClusterStatementGenerator()),
@@ -97,7 +106,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	deps, err := kubernetes.LookupService(
+	svc, deps, err := kubernetes.LookupService(
 		context.Background(),
 		config.Spec.KubernetesConfig.Context,
 		config.Spec.KubernetesConfig.Namespace,
@@ -105,6 +114,10 @@ func main() {
 	)
 	if err != nil {
 		log.Fatal(err)
+	}
+
+	if len(svc.Spec.Ports) != 1 {
+		log.Fatal("only support service with exactly one port")
 	}
 
 	if len(deps) > 1 {
@@ -116,7 +129,7 @@ func main() {
 		log.Fatal("only support deployment with exactly one container")
 	}
 
-	err = writeCDKArtifacts(config, deps[0])
+	err = writeCDKArtifacts(config, svc, deps[0])
 	if err != nil {
 		log.Fatal(err)
 	}

@@ -10,6 +10,8 @@ type FargateServiceStack struct {
 	serviceName string
 	accountID   string
 	region      string
+	taskPort    int
+	taskAsset   string
 	importGen   *CommonImportStatementGenerator
 	vpcGen      *ManagedVPCStatementGenerator
 	dnsGen      *HostedZoneStatementGenerator
@@ -18,13 +20,21 @@ type FargateServiceStack struct {
 
 type Option func(*FargateServiceStack)
 
-func NewFargateServiceStack(stackName string, serviceName string,
-	accountID string, region string, options ...Option) *FargateServiceStack {
+func NewFargateServiceStack(
+	stackName string,
+	serviceName string,
+	accountID string,
+	region string,
+	taskPort int,
+	taskAsset string,
+	options ...Option) *FargateServiceStack {
 	s := &FargateServiceStack{
 		stackName:   stackName,
 		serviceName: serviceName,
 		accountID:   accountID,
 		region:      region,
+		taskPort:    taskPort,
+		taskAsset:   taskAsset,
 		importGen:   &CommonImportStatementGenerator{},
 	}
 	for _, option := range options {
@@ -104,14 +114,15 @@ func (s FargateServiceStack) Generate() ([]string, error) {
 
 	output = append(output, fmt.Sprintf(`        svc = ecs_patterns.ApplicationLoadBalancedFargateService(self, "%sService",`, s.stackName))
 	output = append(output, "            cluster=cluster,")
+	output = append(output, "            redirect_http=True,")
 	output = append(output, "            desired_count=1,")
 	output = append(output, "            memory_limit_mib=512,")
 	output = append(output, "            public_load_balancer=True,")
 	output = append(output, "            protocol=elbv2.ApplicationProtocol.HTTPS,")
 	output = append(output, "            domain_zone=zone,")
 	output = append(output, "            task_image_options=ecs_patterns.ApplicationLoadBalancedTaskImageOptions(")
-	output = append(output, fmt.Sprintf(`                container_port=%d,`, 8080))
-	output = append(output, fmt.Sprintf(`                image=ecs.ContainerImage.from_asset("%s")),`, "docker/ha-go-http/"))
+	output = append(output, fmt.Sprintf(`                container_port=%d,`, s.taskPort))
+	output = append(output, fmt.Sprintf(`                image=ecs.ContainerImage.from_asset("%s")),`, s.taskAsset))
 	output = append(output, fmt.Sprintf(`            domain_name="%s"`, s.serviceName))
 	output = append(output, "            )")
 
