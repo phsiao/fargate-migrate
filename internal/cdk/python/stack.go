@@ -110,7 +110,7 @@ func (s FargateServiceStack) Generate() ([]string, error) {
 	output = append(output, "            protocol=elbv2.ApplicationProtocol.HTTPS,")
 	output = append(output, "            domain_zone=zone,")
 	output = append(output, "            task_image_options=ecs_patterns.ApplicationLoadBalancedTaskImageOptions(")
-	output = append(output, "                image=ecs.ContainerImage.from_registry(\"nginx:alpine\")),")
+	output = append(output, fmt.Sprintf(`                image=ecs.ContainerImage.from_asset("%s")),`, "docker/ha-go-http/"))
 	output = append(output, fmt.Sprintf(`            domain_name="%s"`, s.serviceName))
 	output = append(output, "            )")
 

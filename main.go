@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -20,6 +21,7 @@ var (
 	CDKPath     string = "cdk"
 	APPPath     string = "app.py"
 	CDKJsonPath string = "cdk.json"
+	DockerPath  string = "docker"
 )
 
 func init() {
@@ -43,6 +45,26 @@ func writeCDKArtifacts(config *config.Config, deployment *v1.Deployment) error {
 	err = ioutil.WriteFile(filepath.Join(CDKPath, CDKJsonPath), []byte(strings.Join(cdkJson, "\n")), 0644)
 	if err != nil {
 		return err
+	}
+
+	// create docker directory
+	if _, err := os.Stat(filepath.Join(CDKPath, DockerPath)); os.IsNotExist(err) {
+		os.Mkdir(filepath.Join(CDKPath, DockerPath), 0744)
+	}
+
+	for _, container := range deployment.Spec.Template.Spec.Containers {
+		// create container docker directory
+		if _, err := os.Stat(filepath.Join(CDKPath, DockerPath, container.Name)); os.IsNotExist(err) {
+			os.Mkdir(filepath.Join(CDKPath, DockerPath, container.Name), 0744)
+		}
+		dockerfile := fmt.Sprintf("FROM %s", container.Image)
+		err = ioutil.WriteFile(
+			filepath.Join(CDKPath, DockerPath, container.Name, "Dockerfile"),
+			[]byte(dockerfile), 0644,
+		)
+		if err != nil {
+			return err
+		}
 	}
 
 	stack := cdkpython.NewFargateServiceStack(
