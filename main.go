@@ -3,7 +3,9 @@ package main
 import (
 	"context"
 	"flag"
+	"strings"
 
+	cdkpython "github.com/phsiao/fargate-migrate/internal/cdk/python"
 	"github.com/phsiao/fargate-migrate/internal/config"
 	"github.com/phsiao/fargate-migrate/internal/kubernetes"
 	log "github.com/sirupsen/logrus"
@@ -35,5 +37,20 @@ func main() {
 		log.Fatal(err)
 	}
 
-	log.Infof("%v", deps)
+	log.Debugf("%v", deps)
+
+	stack := cdkpython.NewFargateServiceStack(
+		config.Spec.FargateConfig.StackName,
+		config.Spec.FargateConfig.ServiceName,
+		config.Spec.FargateConfig.AccountID,
+		config.Spec.FargateConfig.Region,
+		cdkpython.WithVPC(cdkpython.NewManagedVPCStatementGenerator()),
+		cdkpython.WithDomain(cdkpython.NewHostedZoneStatementGenerator(config.Spec.FargateConfig.DomainName)),
+		cdkpython.WithCluster(cdkpython.NewFargateClusterStatementGenerator()),
+	)
+	rval, err := stack.Generate()
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Infof("\n%s", strings.Join(rval, "\n"))
 }
