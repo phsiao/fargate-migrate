@@ -1,0 +1,5 @@
+spec:
+  kubernetesConfig:
+    context: default
+    namespace: sandbox
+    service: helloworld
