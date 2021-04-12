@@ -45,7 +45,7 @@ func (g TaskDefinitionStatementGenerator) Generate() (string, error) {
               ecs.PortMapping(container_port={{.ContainerPort}}),{{end}}
             ],
             environment=env,
-			logging=ecs.AwsLogDriver(stream_prefix="{{.Name}}")
+            logging=ecs.AwsLogDriver(stream_prefix="{{.Name}}")
         ){{end}}
 `,
 	)
