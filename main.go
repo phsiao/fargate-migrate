@@ -79,8 +79,8 @@ func writeCDKArtifacts(config *config.Config, service *corev1.Service, deploymen
 		config.Spec.FargateConfig.ServiceName,
 		config.Spec.FargateConfig.AccountID,
 		config.Spec.FargateConfig.Region,
-		int(service.Spec.Ports[0].Port),
-		firstTaskAsset,
+		cdkpython.WithContainerPort(service.Spec.Ports[0].Port),
+		cdkpython.WithAsset(firstTaskAsset),
 		cdkpython.WithVPC(cdkpython.NewManagedVPCStatementGenerator()),
 		cdkpython.WithDomain(cdkpython.NewHostedZoneStatementGenerator(config.Spec.FargateConfig.DomainName)),
 		cdkpython.WithCluster(cdkpython.NewFargateClusterStatementGenerator()),
@@ -89,8 +89,8 @@ func writeCDKArtifacts(config *config.Config, service *corev1.Service, deploymen
 	if err != nil {
 		return err
 	}
-	data := strings.Join(rval, "\n")
-	err = ioutil.WriteFile(filepath.Join(CDKPath, APPPath), []byte(data), 0644)
+
+	err = ioutil.WriteFile(filepath.Join(CDKPath, APPPath), []byte(rval), 0644)
 	if err != nil {
 		return err
 	}

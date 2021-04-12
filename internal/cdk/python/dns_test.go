@@ -8,10 +8,10 @@ import (
 
 func TestHostedZoneStatementGenerator(t *testing.T) {
 	g := HostedZoneStatementGenerator{
-		zoneName:   "TestZone",
-		domainName: "example.com",
+		Name:       "TestZone",
+		DomainName: "example.com",
 	}
 	actual, err := g.Generate()
 	assert.NoError(t, err)
-	assert.Equal(t, []string{"route53.HostedZone.from_lookup(self, \"TestZone\", domain_name=\"example.com\")"}, actual)
+	assert.Equal(t, `route53.HostedZone.from_lookup(self, "TestZone", domain_name="example.com")`, actual)
 }
