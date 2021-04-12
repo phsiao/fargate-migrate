@@ -54,6 +54,7 @@ func writeCDKArtifacts(config *config.Config, service *corev1.Service, deploymen
 	}
 
 	var firstTaskAsset string
+	var healthCheckPath string
 	for _, container := range deployment.Spec.Template.Spec.Containers {
 		// create container docker directory
 		if _, err := os.Stat(filepath.Join(CDKPath, DockerPath, container.Name)); os.IsNotExist(err) {
@@ -72,6 +73,27 @@ func writeCDKArtifacts(config *config.Config, service *corev1.Service, deploymen
 			// taskAssetPath is relative to CDKPath
 			firstTaskAsset = filepath.Join(DockerPath, container.Name)
 		}
+
+		// extract healthcheck path
+		if container.ReadinessProbe != nil &&
+			container.ReadinessProbe.HTTPGet != nil &&
+			container.ReadinessProbe.HTTPGet.Path != "/" {
+			healthCheckPath = container.ReadinessProbe.HTTPGet.Path
+		}
+	}
+
+	options := []cdkpython.Option{
+		cdkpython.WithContainerPort(service.Spec.Ports[0].TargetPort.IntVal),
+		cdkpython.WithAsset(firstTaskAsset),
+		cdkpython.WithVPC(cdkpython.NewManagedVPCStatementGenerator()),
+		cdkpython.WithDomain(cdkpython.NewHostedZoneStatementGenerator(config.Spec.FargateConfig.DomainName)),
+		cdkpython.WithCluster(cdkpython.NewFargateClusterStatementGenerator()),
+	}
+
+	if healthCheckPath != "" && healthCheckPath != "/" {
+		options = append(options,
+			cdkpython.WithHealthCheck(cdkpython.NewHealthCheckStatementGenerator(healthCheckPath)),
+		)
 	}
 
 	stack := cdkpython.NewFargateServiceStack(
@@ -79,11 +101,7 @@ func writeCDKArtifacts(config *config.Config, service *corev1.Service, deploymen
 		config.Spec.FargateConfig.ServiceName,
 		config.Spec.FargateConfig.AccountID,
 		config.Spec.FargateConfig.Region,
-		cdkpython.WithContainerPort(service.Spec.Ports[0].Port),
-		cdkpython.WithAsset(firstTaskAsset),
-		cdkpython.WithVPC(cdkpython.NewManagedVPCStatementGenerator()),
-		cdkpython.WithDomain(cdkpython.NewHostedZoneStatementGenerator(config.Spec.FargateConfig.DomainName)),
-		cdkpython.WithCluster(cdkpython.NewFargateClusterStatementGenerator()),
+		options...,
 	)
 	rval, err := stack.Generate()
 	if err != nil {
