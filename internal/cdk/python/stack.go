@@ -8,16 +8,17 @@ import (
 )
 
 type FargateServiceStack struct {
-	Name        string
-	ServiceName string
-	AccountID   string
-	Region      string
-	TaskPort    int32
-	TaskAsset   string
-	importGen   *CommonImportStatementGenerator
-	vpcGen      *ManagedVPCStatementGenerator
-	dnsGen      *HostedZoneStatementGenerator
-	clusterGen  *FargateClusterStatementGenerator
+	Name           string
+	ServiceName    string
+	AccountID      string
+	Region         string
+	TaskPort       int32
+	TaskAsset      string
+	importGen      *CommonImportStatementGenerator
+	vpcGen         *ManagedVPCStatementGenerator
+	dnsGen         *HostedZoneStatementGenerator
+	clusterGen     *FargateClusterStatementGenerator
+	healthCheckGen *HealthCheckStatementGenerator
 }
 
 type Option func(*FargateServiceStack)
@@ -72,6 +73,12 @@ func WithCluster(clusterGen *FargateClusterStatementGenerator) Option {
 	}
 }
 
+func WithHealthCheck(healthCheckGen *HealthCheckStatementGenerator) Option {
+	return func(s *FargateServiceStack) {
+		s.healthCheckGen = healthCheckGen
+	}
+}
+
 var _ PythonCodeSnippetGenerator = FargateServiceStack{}
 
 type CommonImportStatementGenerator struct {
@@ -116,6 +123,7 @@ class {{.Name}}Stack(cdk.Stack):
                 image=ecs.ContainerImage.from_asset("{{.TaskAsset}}")),
                 domain_name="{{.ServiceName}}"
             )
+        {{healthcheck}}
 
 app = cdk.App()
 {{.Name}}Stack(app, "{{.Name}}Stack", env=cdk.Environment(account="{{.AccountID}}", region="{{.Region}}"))
@@ -153,6 +161,17 @@ app.synth()
 					log.Fatal(err)
 				}
 				return stmt
+			},
+			"healthcheck": func() string {
+				if s.healthCheckGen != nil {
+					stmt, err := s.healthCheckGen.Generate()
+					if err != nil {
+						log.Fatal(err)
+					}
+					return stmt
+				} else {
+					return ""
+				}
 			},
 		},
 	).Parse(stackTmpl)
