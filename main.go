@@ -83,11 +83,12 @@ func writeCDKArtifacts(config *config.Config, service *corev1.Service, deploymen
 	}
 
 	options := []cdkpython.Option{
-		cdkpython.WithContainerPort(service.Spec.Ports[0].TargetPort.IntVal),
+		cdkpython.WithTrafficPort(service.Spec.Ports[0].TargetPort.IntVal),
 		cdkpython.WithAsset(firstTaskAsset),
 		cdkpython.WithVPC(cdkpython.NewManagedVPCStatementGenerator()),
 		cdkpython.WithDomain(cdkpython.NewHostedZoneStatementGenerator(config.Spec.FargateConfig.DomainName)),
 		cdkpython.WithCluster(cdkpython.NewFargateClusterStatementGenerator()),
+		cdkpython.WithTaskDefinition(cdkpython.NewTaskDefinitionStatementGenerator(deployment.Spec.Template.Spec.Containers)),
 	}
 
 	if healthCheckPath != "" && healthCheckPath != "/" {
@@ -145,6 +146,19 @@ func main() {
 	dep := deps[0]
 	if len(dep.Spec.Template.Spec.Containers) != 1 {
 		log.Fatal("only support deployment with exactly one container")
+	}
+
+	for idx, dep := range deps {
+		containers, err := kubernetes.NormalizeEnvironment(
+			context.Background(),
+			config.Spec.KubernetesConfig.Context,
+			config.Spec.KubernetesConfig.Namespace,
+			dep.Spec.Template.Spec.Containers,
+		)
+		if err != nil {
+			log.Fatal(err)
+		}
+		deps[idx].Spec.Template.Spec.Containers = containers
 	}
 
 	err = writeCDKArtifacts(config, svc, deps[0])

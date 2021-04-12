@@ -12,12 +12,13 @@ type FargateServiceStack struct {
 	ServiceName    string
 	AccountID      string
 	Region         string
-	TaskPort       int32
+	TrafficPort    int32
 	TaskAsset      string
 	importGen      *CommonImportStatementGenerator
 	vpcGen         *ManagedVPCStatementGenerator
 	dnsGen         *HostedZoneStatementGenerator
 	clusterGen     *FargateClusterStatementGenerator
+	taskDefGen     *TaskDefinitionStatementGenerator
 	healthCheckGen *HealthCheckStatementGenerator
 }
 
@@ -34,7 +35,7 @@ func NewFargateServiceStack(
 		ServiceName: serviceName,
 		AccountID:   accountID,
 		Region:      region,
-		TaskPort:    80,
+		TrafficPort: 80,
 		importGen:   &CommonImportStatementGenerator{},
 	}
 	for _, option := range options {
@@ -43,9 +44,9 @@ func NewFargateServiceStack(
 	return s
 }
 
-func WithContainerPort(port int32) Option {
+func WithTrafficPort(port int32) Option {
 	return func(s *FargateServiceStack) {
-		s.TaskPort = port
+		s.TrafficPort = port
 	}
 }
 
@@ -70,6 +71,12 @@ func WithDomain(zoneGen *HostedZoneStatementGenerator) Option {
 func WithCluster(clusterGen *FargateClusterStatementGenerator) Option {
 	return func(s *FargateServiceStack) {
 		s.clusterGen = clusterGen
+	}
+}
+
+func WithTaskDefinition(taskDefGen *TaskDefinitionStatementGenerator) Option {
+	return func(s *FargateServiceStack) {
+		s.taskDefGen = taskDefGen
 	}
 }
 
@@ -110,18 +117,17 @@ class {{.Name}}Stack(cdk.Stack):
         vpc = {{vpc}}
         cluster = {{cluster}}
 
+{{taskdef}}
+
         svc = ecs_patterns.ApplicationLoadBalancedFargateService(self, "{{.Name}}Service",
             cluster=cluster,
             redirect_http=True,
             desired_count=1,
-            memory_limit_mib=512,
             public_load_balancer=True,
             protocol=elbv2.ApplicationProtocol.HTTPS,
             domain_zone=zone,
-            task_image_options=ecs_patterns.ApplicationLoadBalancedTaskImageOptions(
-                container_port={{.TaskPort}},
-                image=ecs.ContainerImage.from_asset("{{.TaskAsset}}")),
-                domain_name="{{.ServiceName}}"
+            task_definition=task_def,
+            domain_name="{{.ServiceName}}"
             )
         {{healthcheck}}
 
@@ -157,6 +163,13 @@ app.synth()
 			},
 			"cluster": func() string {
 				stmt, err := s.clusterGen.Generate()
+				if err != nil {
+					log.Fatal(err)
+				}
+				return stmt
+			},
+			"taskdef": func() string {
+				stmt, err := s.taskDefGen.Generate()
 				if err != nil {
 					log.Fatal(err)
 				}
