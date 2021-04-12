@@ -8,19 +8,21 @@ import (
 type ManagedVPCStatementGenerator struct {
 	Name   string
 	MaxAZs int
+	CIDR   string
 }
 
 func NewManagedVPCStatementGenerator() *ManagedVPCStatementGenerator {
 	rval := ManagedVPCStatementGenerator{
 		Name:   "ManagedVPC",
 		MaxAZs: 2,
+		CIDR:   "10.0.0.0/26",
 	}
 
 	return &rval
 }
 
 func (g ManagedVPCStatementGenerator) Generate() (string, error) {
-	tmpl, err := template.New("vpc").Parse(`ec2.Vpc(self, "{{.Name}}", max_azs={{.MaxAZs}})`)
+	tmpl, err := template.New("vpc").Parse(`ec2.Vpc(self, "{{.Name}}", cidr="{{.CIDR}}", max_azs={{.MaxAZs}})`)
 	if err != nil {
 		return "", err
 	}
