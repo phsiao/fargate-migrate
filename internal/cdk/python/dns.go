@@ -1,28 +1,35 @@
 package python
 
-import "fmt"
+import (
+	"bytes"
+	"text/template"
+)
 
 type HostedZoneStatementGenerator struct {
-	zoneName   string
-	domainName string
+	Name       string
+	DomainName string
 }
 
 func NewHostedZoneStatementGenerator(domainName string) *HostedZoneStatementGenerator {
 	rval := HostedZoneStatementGenerator{
-		zoneName:   "HostedZone",
-		domainName: domainName,
+		Name:       "HostedZone",
+		DomainName: domainName,
 	}
 
 	return &rval
 }
 
-func (g HostedZoneStatementGenerator) Generate() ([]string, error) {
-	rval := []string{
-		fmt.Sprintf(`route53.HostedZone.from_lookup(self, "%s", domain_name="%s")`,
-			g.zoneName, g.domainName,
-		),
+func (g HostedZoneStatementGenerator) Generate() (string, error) {
+	tmpl, err := template.New("zone").Parse(`route53.HostedZone.from_lookup(self, "{{.Name}}", domain_name="{{.DomainName}}")`)
+	if err != nil {
+		return "", err
 	}
-	return rval, nil
+	writer := &bytes.Buffer{}
+	err = tmpl.Execute(writer, &g)
+	if err != nil {
+		return "", err
+	}
+	return writer.String(), nil
 }
 
 var _ PythonCodeSnippetGenerator = HostedZoneStatementGenerator{}

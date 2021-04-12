@@ -8,11 +8,9 @@ import (
 
 func TestFargateClusterStatementGenerator(t *testing.T) {
 	g := FargateClusterStatementGenerator{
-		clusterName: "TestCluster",
+		Name: "TestCluster",
 	}
 	actual, err := g.Generate()
 	assert.NoError(t, err)
-	assert.Equal(t, []string{
-		"ecs.Cluster(self, \"TestCluster\", vpc=vpc, capacity_providers=[\"FARGATE\", \"FARGATE_SPOT\"])",
-	}, actual)
+	assert.Equal(t, `ecs.Cluster(self, "TestCluster", vpc=vpc, capacity_providers=["FARGATE", "FARGATE_SPOT"])`, actual)
 }

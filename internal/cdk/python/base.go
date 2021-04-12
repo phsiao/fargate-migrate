@@ -1,5 +1,5 @@
 package python
 
 type PythonCodeSnippetGenerator interface {
-	Generate() ([]string, error)
+	Generate() (string, error)
 }

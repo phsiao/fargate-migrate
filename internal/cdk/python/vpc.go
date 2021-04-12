@@ -1,26 +1,35 @@
 package python
 
-import "fmt"
+import (
+	"bytes"
+	"text/template"
+)
 
 type ManagedVPCStatementGenerator struct {
-	vpcName string
-	maxAZs  int
+	Name   string
+	MaxAZs int
 }
 
 func NewManagedVPCStatementGenerator() *ManagedVPCStatementGenerator {
 	rval := ManagedVPCStatementGenerator{
-		vpcName: "ManagedVPC",
-		maxAZs:  2,
+		Name:   "ManagedVPC",
+		MaxAZs: 2,
 	}
 
 	return &rval
 }
 
-func (g ManagedVPCStatementGenerator) Generate() ([]string, error) {
-	rval := []string{
-		fmt.Sprintf("ec2.Vpc(self, \"%s\", max_azs=%d)", g.vpcName, g.maxAZs),
+func (g ManagedVPCStatementGenerator) Generate() (string, error) {
+	tmpl, err := template.New("vpc").Parse(`ec2.Vpc(self, "{{.Name}}", max_azs={{.MaxAZs}})`)
+	if err != nil {
+		return "", err
 	}
-	return rval, nil
+	writer := &bytes.Buffer{}
+	err = tmpl.Execute(writer, &g)
+	if err != nil {
+		return "", err
+	}
+	return writer.String(), nil
 }
 
 var _ PythonCodeSnippetGenerator = ManagedVPCStatementGenerator{}
