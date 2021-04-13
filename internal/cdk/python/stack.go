@@ -118,7 +118,6 @@ class {{.Name}}Stack(cdk.Stack):
         cluster = {{cluster}}
 
 {{taskdef}}
-
         svc = ecs_patterns.ApplicationLoadBalancedFargateService(self, "{{.Name}}Service",
             cluster=cluster,
             redirect_http=True,
