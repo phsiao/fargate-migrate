@@ -85,7 +85,6 @@ func writeCDKArtifacts(config *config.Config, service *corev1.Service, deploymen
 	options := []cdkpython.Option{
 		cdkpython.WithTrafficPort(service.Spec.Ports[0].TargetPort.IntVal),
 		cdkpython.WithAsset(firstTaskAsset),
-		cdkpython.WithVPC(cdkpython.NewManagedVPCStatementGenerator()),
 		cdkpython.WithDomain(cdkpython.NewHostedZoneStatementGenerator(config.Spec.FargateConfig.DomainName)),
 		cdkpython.WithCluster(cdkpython.NewFargateClusterStatementGenerator()),
 		cdkpython.WithTaskDefinition(cdkpython.NewTaskDefinitionStatementGenerator(deployment.Spec.Template.Spec.Containers)),
@@ -95,6 +94,12 @@ func writeCDKArtifacts(config *config.Config, service *corev1.Service, deploymen
 		options = append(options,
 			cdkpython.WithHealthCheck(cdkpython.NewHealthCheckStatementGenerator(healthCheckPath)),
 		)
+	}
+
+	if config.Spec.FargateConfig.VPCID != "" {
+		options = append(options, cdkpython.WithVPC(cdkpython.NewLookupVPCStatementGenerator(config.Spec.FargateConfig.VPCID)))
+	} else {
+		options = append(options, cdkpython.WithVPC(cdkpython.NewManagedVPCStatementGenerator()))
 	}
 
 	stack := cdkpython.NewFargateServiceStack(
