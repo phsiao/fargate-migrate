@@ -144,10 +144,11 @@ func main() {
 		log.Fatal("only support service with exactly one port")
 	}
 
-	if true {
+	if config.Spec.KubernetesConfig.Context != nil &&
+		*config.Spec.KubernetesConfig.Context == "eks-ds-sandbox" {
 		filteredDeps := []*appsv1.Deployment{}
 		for idx, dep := range deps {
-			if strings.Contains(dep.Name, "supplier-release") {
+			if strings.Contains(dep.Name, "-release-") {
 				filteredDeps = append(filteredDeps, deps[idx])
 			}
 		}
