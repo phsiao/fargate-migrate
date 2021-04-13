@@ -32,6 +32,11 @@ func TestMinCPUMemroyConfiguration(t *testing.T) {
 			memory: 103400,
 			want:   [2]int{4096, 30720},
 		},
+		{
+			cpu:    100,
+			memory: 629145600,
+			want:   [2]int{4096, 30720},
+		},
 	}
 
 	for _, tc := range tests {

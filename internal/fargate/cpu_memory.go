@@ -58,18 +58,12 @@ func init() {
 }
 
 func MinCPUMemroyConfiguration(cpu, memory int) (matchCPU, matchMemory int) {
-	if matchCPU == 0 {
-		maxConfig := supportedCPUMemory[len(supportedCPUMemory)-1]
-		matchCPU = maxConfig.cpuConfig
-		matchMemory = maxConfig.memoryConfigs[len(maxConfig.memoryConfigs)-1]
-	}
 
 	for _, config := range supportedCPUMemory {
 		if cpu > config.cpuConfig {
 			continue
 		}
 		matchCPU = config.cpuConfig
-		matchMemory = config.memoryConfigs[len(config.memoryConfigs)-1]
 		for _, memoryConfig := range config.memoryConfigs {
 			if memory > memoryConfig {
 				continue
@@ -79,6 +73,11 @@ func MinCPUMemroyConfiguration(cpu, memory int) (matchCPU, matchMemory int) {
 			}
 		}
 	}
+
+	// if we reach here that means there is not matching minimal config
+	maxConfig := supportedCPUMemory[len(supportedCPUMemory)-1]
+	matchCPU = maxConfig.cpuConfig
+	matchMemory = maxConfig.memoryConfigs[len(maxConfig.memoryConfigs)-1]
 
 	return
 }
