@@ -15,7 +15,7 @@ type FargateServiceStack struct {
 	TrafficPort    int32
 	TaskAsset      string
 	importGen      *CommonImportStatementGenerator
-	vpcGen         *ManagedVPCStatementGenerator
+	vpcGen         PythonCodeSnippetGenerator
 	dnsGen         *HostedZoneStatementGenerator
 	clusterGen     *FargateClusterStatementGenerator
 	taskDefGen     *TaskDefinitionStatementGenerator
@@ -56,7 +56,7 @@ func WithAsset(asset string) Option {
 	}
 }
 
-func WithVPC(vpcGen *ManagedVPCStatementGenerator) Option {
+func WithVPC(vpcGen PythonCodeSnippetGenerator) Option {
 	return func(s *FargateServiceStack) {
 		s.vpcGen = vpcGen
 	}

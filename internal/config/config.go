@@ -24,6 +24,7 @@ type KubernetesConfig struct {
 type FargateConfig struct {
 	StackName   string `yaml:"name"`
 	AccountID   string `yaml:"accountID"`
+	VPCID       string `yaml:"vpcID"`
 	Region      string `yaml:"region"`
 	ServiceName string `yaml:"serviceName"`
 	DomainName  string `yaml:"domainName"`
