@@ -144,19 +144,19 @@ func main() {
 		log.Fatal("only support service with exactly one port")
 	}
 
-	if config.Spec.KubernetesConfig.Context != nil &&
-		*config.Spec.KubernetesConfig.Context == "eks-ds-sandbox" {
-		filteredDeps := []*appsv1.Deployment{}
-		for idx, dep := range deps {
-			if strings.Contains(dep.Name, "-release-") {
-				filteredDeps = append(filteredDeps, deps[idx])
-			}
-		}
-		deps = filteredDeps
-	}
-
 	if len(deps) > 1 {
-		log.Fatal("only support services backed by exactly one deployment")
+		if config.Spec.KubernetesConfig.Context != nil &&
+			*config.Spec.KubernetesConfig.Context == "eks-ds-sandbox" {
+			filteredDeps := []*appsv1.Deployment{}
+			for idx, dep := range deps {
+				if strings.Contains(dep.Name, "-release-") {
+					filteredDeps = append(filteredDeps, deps[idx])
+				}
+			}
+			deps = filteredDeps
+		} else {
+			log.Fatal("only support services backed by exactly one deployment")
+		}
 	}
 
 	dep := deps[0]
