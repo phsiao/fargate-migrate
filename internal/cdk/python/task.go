@@ -60,6 +60,12 @@ func (g TaskDefinitionStatementGenerator) Generate() (string, error) {
             port_mappings=[{{range .Ports}}
               ecs.PortMapping(container_port={{.ContainerPort}}),{{end}}
             ],
+            entry_point=[{{range $element := .Command}}
+              "{{$element}}",{{end}}
+            ],
+            command=[{{range $element := .Args}}
+              "{{$element}}",{{end}}
+            ],
             environment=env,
             logging=ecs.AwsLogDriver(stream_prefix="{{.Name}}")
         ){{end}}
