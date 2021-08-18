@@ -12,5 +12,5 @@ func TestFargateClusterStatementGenerator(t *testing.T) {
 	}
 	actual, err := g.Generate()
 	assert.NoError(t, err)
-	assert.Equal(t, `ecs.Cluster(self, "TestCluster", vpc=vpc, capacity_providers=["FARGATE", "FARGATE_SPOT"])`, actual)
+	assert.Equal(t, `ecs.Cluster(self, "TestCluster", vpc=vpc, enable_fargate_capacity_providers=True)`, actual)
 }

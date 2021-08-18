@@ -18,7 +18,7 @@ func NewFargateClusterStatementGenerator() *FargateClusterStatementGenerator {
 }
 
 func (g FargateClusterStatementGenerator) Generate() (string, error) {
-	tmpl, err := template.New("cluster").Parse(`ecs.Cluster(self, "{{.Name}}", vpc=vpc, capacity_providers=["FARGATE", "FARGATE_SPOT"])`)
+	tmpl, err := template.New("cluster").Parse(`ecs.Cluster(self, "{{.Name}}", vpc=vpc, enable_fargate_capacity_providers=True)`)
 	if err != nil {
 		return "", err
 	}
